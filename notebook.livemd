@@ -57,20 +57,24 @@ mutation = fn population ->
   end)
 end
 
-gen_alg = fn population, algorithm ->
+gen_alg = fn population, algorithm, generation ->
   case check_for_best.(population) do
     {:ok, best} ->
-      best |> IO.inspect(label: :solution)
+      IO.write("\rSolultion Generation: #{generation} ")
+      IO.puts("#{inspect(best)}")
+      best
 
     {:error, _not_best} ->
+      IO.write("\rSolving Generation: #{generation}")
+
       population
       |> evaluate.()
       |> selection.()
       |> crossover.()
       |> mutation.()
-      |> algorithm.(algorithm)
+      |> algorithm.(algorithm, generation + 1)
   end
 end
 
-measure.(fn -> gen_alg.(population, gen_alg) end)
+measure.(fn -> gen_alg.(population, gen_alg, 0) end)
 ```
