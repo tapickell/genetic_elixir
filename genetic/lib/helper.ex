@@ -6,8 +6,8 @@ defmodule Genetic.Helper do
     |> Kernel./(1_000_000)
   end
 
-  def output_solution({generation, solution}, label) do
-    IO.puts("#{label} Solved Gen: #{generation}")
+  def output_solution(solution, label) do
+    IO.puts("#{label} Solved")
     IO.inspect(solution)
   end
 

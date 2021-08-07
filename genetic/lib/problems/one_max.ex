@@ -1,4 +1,7 @@
 defmodule Genetic.Problem.OneMax do
+  @behaviour Genetic.Problem
+
+  alias Genetic.Types.Chromosome
   alias Genetic.{Helper, Instrumentor, Solver}
 
   @max_fitness 1000
@@ -7,7 +10,7 @@ defmodule Genetic.Problem.OneMax do
     {:ok, pid} = Instrumentor.start_link([])
 
     Helper.measure_time(fn ->
-      Solver.run(&fitness_function/1, &genotype/0, &on_tick/1, @max_fitness)
+      Solver.run(__MODULE__)
       |> Helper.output_solution(__MODULE__)
     end)
     |> Helper.output_measurements(__MODULE__)
@@ -18,6 +21,14 @@ defmodule Genetic.Problem.OneMax do
     :ok = Instrumentor.stop(pid)
   end
 
+  @impl true
+  def solution([best | _] = population) do
+    if best.fitness == @max_fitness,
+      do: {:solved, best},
+      else: {:unsolved, population}
+  end
+
+  @impl true
   def on_tick(proc_info) do
     {DateTime.utc_now(),
      %{
@@ -31,11 +42,14 @@ defmodule Genetic.Problem.OneMax do
     :ok
   end
 
+  @impl true
   def genotype do
-    for _ <- 1..1000, do: Enum.random(0..1)
+    genes = for _ <- 1..@max_fitness, do: Enum.random(0..1)
+    %Chromosome{genes: genes, size: @max_fitness}
   end
 
+  @impl true
   def fitness_function(chromosome) do
-    Enum.sum(chromosome)
+    Enum.sum(chromosome.genes)
   end
 end

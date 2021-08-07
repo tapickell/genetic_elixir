@@ -1,17 +1,12 @@
 defmodule Genetic.Solver do
+  alias Genetic.Types.Chromosome
+
   @population_size 100
   @chunk_size 2
 
-  def run(fitness_function, genotype, instrumentor, max_fitness, opts \\ []) do
-    state = %{
-      fitness_function: fitness_function,
-      generation: 0,
-      instrumentor: instrumentor,
-      max_fitness: max_fitness
-    }
-
-    initialize(genotype, opts)
-    |> evolve(state)
+  def run(problem, opts \\ []) do
+    initialize(&problem.genotype/0, opts)
+    |> evolve(problem)
   end
 
   defp initialize(genotype, opts) do
@@ -19,60 +14,51 @@ defmodule Genetic.Solver do
     for _ <- 1..population_size, do: genotype.()
   end
 
-  defp evolve(population, state) do
-    %{generation: generation, instrumentor: instrumentor} = state
-    instrumentor.(Process.info(self()))
+  defp evolve(population, problem) do
+    problem.on_tick(Process.info(self()))
 
-    case evaluate(population, state) |> solution(state) do
-      {:solved, generation, best} ->
-        {generation, best}
+    case evaluate(population, &problem.fitness_function/1) |> problem.solution() do
+      {:solved, best} ->
+        {:ok, best}
 
-      {:training, population} ->
+      {:unsolved, population} ->
         population
-        |> select(state)
-        |> crossover(state)
-        |> mutation(state)
-        |> evolve(%{state | generation: generation + 1})
+        |> select()
+        |> crossover()
+        |> mutation()
+        |> evolve(problem)
     end
   end
 
-  defp solution(population, state) do
-    %{
-      fitness_function: fitness_function,
-      max_fitness: max_fitness,
-      generation: generation
-    } = state
-
-    [best | _] = population
-
-    if fitness_function.(best) == max_fitness,
-      do: {:solved, generation, best},
-      else: {:training, population}
+  defp evaluate(population, fitness_function) do
+    population
+    |> Enum.map(fn chromosome ->
+      fitness = fitness_function.(chromosome)
+      age = chromosome.age + 1
+      %Chromosome{chromosome | fitness: fitness, age: age}
+    end)
+    |> Enum.sort_by(fitness_function, &>=/2)
   end
 
-  defp evaluate(population, %{fitness_function: fitness_function}) do
-    Enum.sort_by(population, fitness_function, &>=/2)
-  end
-
-  defp select(population, _state) do
+  defp select(population) do
     population
     |> Enum.chunk_every(@chunk_size)
     |> Enum.map(&List.to_tuple/1)
   end
 
-  defp crossover(population, _state) do
+  defp crossover(population) do
     Enum.reduce(population, [], fn {p1, p2}, acc ->
-      cx_point = :rand.uniform(length(p1))
-      {{h1, t1}, {h2, t2}} = {Enum.split(p1, cx_point), Enum.split(p2, cx_point)}
-      {c1, c2} = {h1 ++ t2, h2 ++ t1}
+      cx_point = :rand.uniform(length(p1.genes))
+      {{h1, t1}, {h2, t2}} = {Enum.split(p1.genes, cx_point), Enum.split(p2.genes, cx_point)}
+      {c1, c2} = {%Chromosome{p1 | genes: h1 ++ t2}, %Chromosome{p2 | genes: h2 ++ t1}}
       [c1, c2 | acc]
     end)
   end
 
-  defp mutation(population, _state) do
+  defp mutation(population) do
     Enum.map(population, fn chromosome ->
       if :rand.uniform() < 0.05 do
-        Enum.shuffle(chromosome)
+        %Chromosome{chromosome | genes: Enum.shuffle(chromosome.genes)}
       else
         chromosome
       end
