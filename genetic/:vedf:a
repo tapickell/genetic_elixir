@@ -1,13 +1,12 @@
-defmodule Genetic.Problem.OneMax do
-  @moduledoc """
-  Binary Genotype Optimization Problem
-  """
+defmodule Genetic.Problem.Spelling do
   @behaviour Genetic.Problem
 
   alias Genetic.Types.Chromosome
   alias Genetic.{Helper, Instrumentor, Solver}
 
-  @max_fitness 1000
+  @fitness_goal 1
+  @string_length 34
+  @target "supercalifragilisticexpialidocious"
 
   def solve(opts \\ []) do
     {:ok, pid} = Instrumentor.start_link([])
@@ -25,6 +24,21 @@ defmodule Genetic.Problem.OneMax do
   end
 
   @impl true
+  def genotype do
+    genes =
+      Stream.repeatedly(fn -> Enum.random(?a..?z) end)
+      |> Enum.take(@string_length)
+
+    %Chromosome{genes: genes, size: @string_length}
+  end
+
+  @impl true
+  def fitness_function(chromosome) do
+    guess = List.to_string(chromosome.genes)
+    String.jaro_distance(@target, guess)
+  end
+
+  @impl true
   def solution([best | rest] = population, generation, temp) do
     worst = List.last(rest)
 
@@ -32,7 +46,7 @@ defmodule Genetic.Problem.OneMax do
       "\rBest: #{best.fitness}, Worst: #{worst.fitness}, Gen: #{generation}, PopSize: #{length(population)}, Temp: #{Float.ceil(temp, 2)}"
     )
 
-    if best.fitness == @max_fitness || generation >= 50_000,
+    if best.fitness >= @fitness_goal - 0.01 || generation >= 2000,
       do: {:solved, best},
       else: {:unsolved, best, population}
   end
@@ -49,16 +63,5 @@ defmodule Genetic.Problem.OneMax do
     |> Instrumentor.add_tick()
 
     :ok
-  end
-
-  @impl true
-  def genotype do
-    genes = for _ <- 1..@max_fitness, do: Enum.random(0..1)
-    %Chromosome{genes: genes, size: @max_fitness}
-  end
-
-  @impl true
-  def fitness_function(chromosome) do
-    Enum.sum(chromosome.genes)
   end
 end

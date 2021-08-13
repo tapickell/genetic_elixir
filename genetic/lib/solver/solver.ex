@@ -3,10 +3,16 @@ defmodule Genetic.Solver do
 
   @population_size 100
   @chunk_size 2
+  @randomness 0.05
+  @cull_generation 10
+  @best_part 4
 
   def run(problem, opts \\ []) do
+    cull_generation = Keyword.get(opts, :cull_generation, @cull_generation)
+    best_part = Keyword.get(opts, :best_part, @best_part)
+
     initialize(&problem.genotype/0, opts)
-    |> evolve(problem)
+    |> evolve(problem, {0, 0, 0.0, cull_generation, best_part})
   end
 
   defp initialize(genotype, opts) do
@@ -14,19 +20,19 @@ defmodule Genetic.Solver do
     for _ <- 1..population_size, do: genotype.()
   end
 
-  defp evolve(population, problem) do
-    problem.on_tick(Process.info(self()))
-
-    case evaluate(population, &problem.fitness_function/1) |> problem.solution() do
+  defp evolve(population, problem, {g, lmf, temp, cull, best_part}) do
+    case evaluate(population, &problem.fitness_function/1) |> problem.solution(g, temp) do
       {:solved, best} ->
         {:ok, best}
 
-      {:unsolved, population} ->
+      {:unsolved, best_enough, population} ->
+        pop_temp = 0.8 * (temp + (best_enough.fitness - lmf))
+
         population
-        |> select()
+        |> select({g, cull, best_part})
         |> crossover()
         |> mutation()
-        |> evolve(problem)
+        |> evolve(problem, {g + 1, best_enough.fitness, pop_temp, cull, best_part})
     end
   end
 
@@ -40,7 +46,21 @@ defmodule Genetic.Solver do
     |> Enum.sort_by(fitness_function, &>=/2)
   end
 
-  defp select(population) do
+  defp select(population, {generation, cull, part})
+       when generation > 0 and rem(generation, cull) == 0 do
+    subset_len = part
+    IO.puts(" Clone Best 1/#{subset_len}")
+    len = length(population)
+    subset = Integer.floor_div(len, subset_len)
+    top = Enum.take(population, subset)
+
+    1..subset_len
+    |> Enum.reduce([], fn _, acc -> [top | acc] |> List.flatten() end)
+    |> Enum.chunk_every(@chunk_size)
+    |> Enum.map(&List.to_tuple/1)
+  end
+
+  defp select(population, _generation_cull_part) do
     population
     |> Enum.chunk_every(@chunk_size)
     |> Enum.map(&List.to_tuple/1)
@@ -57,7 +77,7 @@ defmodule Genetic.Solver do
 
   defp mutation(population) do
     Enum.map(population, fn chromosome ->
-      if :rand.uniform() < 0.05 do
+      if :rand.uniform() < @randomness do
         %Chromosome{chromosome | genes: Enum.shuffle(chromosome.genes)}
       else
         chromosome

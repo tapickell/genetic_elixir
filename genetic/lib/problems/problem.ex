@@ -3,6 +3,7 @@ defmodule Genetic.Problem do
 
   @callback genotype :: Chromosome.t()
   @callback fitness_function(Chromosome.t()) :: number()
-  @callback solution(Enum.t()) :: {:solved, Enum.t()} | {:unsolved, Enum.t()}
+  @callback solution(Enum.t(), integer(), number()) ::
+              {:solved, Enum.t()} | {:unsolved, Enum.t()}
   @callback on_tick(Keyword.t()) :: :ok
 end
