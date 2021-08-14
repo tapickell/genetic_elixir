@@ -43,7 +43,7 @@ defmodule Genetic.Problem.Spelling do
     worst = List.last(rest)
 
     IO.write(
-      "\rCurrent Best: #{best.fitness}, Current Worst: #{worst.fitness}, Gen: #{generation}, PopSize: #{length(population)}, Temp: #{Float.ceil(temp, 2)}"
+      "\rCurrent Best: #{best.fitness}, Current Worst: #{worst.fitness}, Gen: #{generation}, PopSize: #{length(population)}, Temp: #{Float.ceil(temp, 2)}\n"
     )
 
     if best.fitness >= @fitness_goal - 0.01 || generation >= 2000,

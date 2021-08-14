@@ -65,7 +65,7 @@ defmodule Genetic.Problem.Cargo do
     worst = List.last(rest)
 
     IO.write(
-      "\rBest: #{best.fitness}, Worst: #{worst.fitness}, Gen: #{generation}, PopSize: #{length(population)}, Temp: #{Float.ceil(temp, 2)}"
+      "\rBest: #{best.fitness}, Worst: #{worst.fitness}, Gen: #{generation}, PopSize: #{length(population)}, Temp: #{Float.ceil(temp, 2)}\n"
     )
 
     if best.fitness >= 35 || generation >= 10_000,

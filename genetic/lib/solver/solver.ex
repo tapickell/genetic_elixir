@@ -1,6 +1,6 @@
 defmodule Genetic.Solver do
   alias Genetic.Types.Chromosome
-  alias Genetic.Strategies.Selection
+  alias Genetic.Strategies.{Crossover, Selection}
 
   @population_size 100
   @chunk_size 2
@@ -27,7 +27,7 @@ defmodule Genetic.Solver do
 
         population
         |> select(g, opts)
-        |> crossover()
+        |> crossover(opts)
         |> mutation()
         |> evolve(problem, {g + 1, best_enough.fitness, pop_temp}, opts)
     end
@@ -43,39 +43,40 @@ defmodule Genetic.Solver do
     |> Enum.sort_by(fitness_function, &>=/2)
   end
 
-  defp select(population, generation, opts) do
-    if generation in clone_gens(population) do
-      len = length(population)
-      subset_len = selection_count(population)
-      IO.puts(" Clone Best #{subset_len}/#{len}")
+  # defp select(population, generation, opts) do
+  #  if generation in clone_gens(population) do
+  #    len = length(population)
+  #    subset_len = selection_count(population)
+  #    IO.puts(" Clone Best #{subset_len}/#{len}")
 
-      parents =
-        Keyword.get(opts, :selection_type, &Selection.elite/2)
-        |> apply([population, subset_len])
-        |> Stream.cycle()
-        |> Enum.take(len)
-        |> Enum.shuffle()
-        |> paired_up()
+  #    parents =
+  #      Keyword.get(opts, :selection_type, &Selection.elite/2)
+  #      |> apply([population, subset_len])
+  #      |> Stream.cycle()
+  #      |> Enum.take(len)
+  #      |> Enum.shuffle()
+  #      |> paired_up()
 
-      {parents, []}
-    else
-      select(population, opts)
-    end
-  end
+  #    {parents, []}
+  #  else
+  #    select(population, opts)
+  #  end
+  # end
 
-  defp select(population, opts) do
+  defp select(population, _g, opts) do
     parents =
       Keyword.get(opts, :selection_type, &Selection.elite/2)
       |> apply([population, selection_count(population)])
 
+    # IO.inspect(length(parents), label: :parents_length)
     {paired_up(parents), population_diff(population, parents)}
   end
 
-  defp crossover({population, nonselected}) do
+  defp crossover({population, nonselected}, opts) do
+    crossover_type = Keyword.get(opts, :crossover_type, &Crossover.order_one/2)
+
     Enum.reduce(population, [], fn {p1, p2}, acc ->
-      cx_point = :rand.uniform(length(p1.genes))
-      {{h1, t1}, {h2, t2}} = {Enum.split(p1.genes, cx_point), Enum.split(p2.genes, cx_point)}
-      {c1, c2} = {%Chromosome{p1 | genes: h1 ++ t2}, %Chromosome{p2 | genes: h2 ++ t1}}
+      {c1, c2} = apply(crossover_type, [p1, p2])
       [c1, c2 | acc]
     end) ++ nonselected
   end
@@ -95,14 +96,26 @@ defmodule Genetic.Solver do
   end
 
   defp selection_count(population) do
+    # IO.inspect(length(population), label: :pop_pre_selection_count)
+
     make_even(round(length(population) * @selection_rate))
+    # |> IO.inspect(label: :selection_count)
   end
 
   defp population_diff(population, subset) do
-    population
-    |> MapSet.new()
-    |> MapSet.difference(MapSet.new(subset))
-    |> MapSet.to_list()
+    diff_len = length(population) - length(subset)
+
+    diff =
+      population
+      |> MapSet.new()
+      |> MapSet.difference(MapSet.new(subset))
+      |> MapSet.to_list()
+      |> clone_fill(diff_len)
+
+    # IO.inspect(length(population), label: :population_length)
+    # IO.inspect(length(subset), label: :subset_length)
+    # IO.inspect(length(diff), label: :diff_length)
+    diff
   end
 
   defp paired_up(population) do
@@ -114,5 +127,11 @@ defmodule Genetic.Solver do
   defp clone_gens(population) do
     len = length(population)
     Stream.iterate(10, &(&1 * 2)) |> Enum.take_while(fn x -> x < len end)
+  end
+
+  defp clone_fill(population, len) do
+    population
+    |> Stream.cycle()
+    |> Enum.take(len)
   end
 end

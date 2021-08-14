@@ -29,7 +29,7 @@ defmodule Genetic.Problem.Sudoku do
     t = Float.ceil(temp, 2)
 
     IO.write(
-      "\rBest: #{best.fitness}, Worst: #{worst.fitness}, Gen: #{generation}, PopSize: #{length(population)}, Temp: #{t}"
+      "\rBest: #{best.fitness}, Worst: #{worst.fitness}, Gen: #{generation}, PopSize: #{length(population)}, Temp: #{t}\n"
     )
 
     if best.fitness == @puzzle_size || generation >= 10_000 || (generation > 200 && t == 0.01),

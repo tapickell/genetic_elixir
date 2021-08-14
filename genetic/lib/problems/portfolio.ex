@@ -25,7 +25,7 @@ defmodule Genetic.Problem.Portfolio do
     worst = List.last(rest)
 
     IO.write(
-      "\rBest: #{best.fitness}, Worst: #{worst.fitness}, Gen: #{generation}, PopSize: #{length(population)}, Temp: #{Float.ceil(temp, 2)}"
+      "\rBest: #{best.fitness}, Worst: #{worst.fitness}, Gen: #{generation}, PopSize: #{length(population)}, Temp: #{Float.ceil(temp, 2)}\n"
     )
 
     max_value = Enum.max_by(population, &fitness_function/1)
