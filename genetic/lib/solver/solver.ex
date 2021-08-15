@@ -40,7 +40,16 @@ defmodule Genetic.Solver do
       age = chromosome.age + 1
       %Chromosome{chromosome | fitness: fitness, age: age}
     end)
-    |> Enum.sort_by(fitness_function, &>=/2)
+    |> Enum.sort_by(& &1.fitness, :desc)
+
+    # |> fitness_inspection()
+  end
+
+  defp fitness_inspection(population) do
+    Enum.map(population, & &1.fitness)
+    |> IO.inspect(label: :fitness_sorted)
+
+    population
   end
 
   # defp select(population, generation, opts) do
