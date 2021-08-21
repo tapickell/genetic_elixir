@@ -1,6 +1,6 @@
 defmodule Genetic.Solver do
   alias Genetic.Types.Chromosome
-  alias Genetic.Strategies.{Crossover, Selection}
+  alias Genetic.Strategies.{Crossover, Mutation, Selection}
 
   @population_size 100
   @chunk_size 2
@@ -28,7 +28,7 @@ defmodule Genetic.Solver do
         population
         |> select(g, opts)
         |> crossover(opts)
-        |> mutation()
+        |> mutation(opts)
         |> evolve(problem, {g + 1, best_enough.fitness, pop_temp}, opts)
     end
   end
@@ -90,10 +90,13 @@ defmodule Genetic.Solver do
     end) ++ nonselected
   end
 
-  defp mutation(population) do
+  defp mutation(population, opts) do
+    mutation_type = Keyword.get(opts, :mutation_type, &Mutation.flip/1)
+    mutation_rate = Keyword.get(opts, :mutation_rate, @randomness)
+
     Enum.map(population, fn chromosome ->
-      if :rand.uniform() < @randomness do
-        %Chromosome{chromosome | genes: Enum.shuffle(chromosome.genes)}
+      if :rand.uniform() < mutation_rate do
+        apply(mutation_type, [chromosome])
       else
         chromosome
       end
