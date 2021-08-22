@@ -3,6 +3,23 @@ defmodule Genetic.Strategies.Mutation do
 
   use Bitwise
 
+  # real value genes
+  def gaussian(%{genes: genes} = chromosome) do
+    gene_length = length(genes)
+    mu = Enum.sum(genes) / gene_length
+
+    sigma =
+      genes
+      |> Enum.map(fn x -> (mu - x) * (mu - x) end)
+      |> Enum.sum()
+      |> Kernel./(gene_length)
+
+    new_genes = for _ <- 1..gene_length, do: :rand.normal(mu, sigma)
+    IO.inspect(gene_length == length(new_genes), label: :length_check)
+
+    %Chromosome{chromosome | genes: new_genes}
+  end
+
   def scramble(%{genes: genes} = chromosome) do
     %Chromosome{chromosome | genes: Enum.shuffle(genes)}
   end
